@@ -1,0 +1,163 @@
+do_updates:
+	instantiations <- []
+	ocompartments2ground <- []
+	foreach element { element in the term to update et, element in the rule that tells us how to update er } in the updates to do
+		if resulting multiplicity from update_delete* ( et, rt ) == 0 && et is a Compartment
+			delete et from term
+		if rt is a PCompartment
+			instantiations[rt.wrap_variable] = et.wrap
+			instantiations[rt.content_variable] = et.content
+			delete et from term
+
+			foreach element ot on the same depth level as rt on the rhs of the rule
+				ocompartments2ground[ot] = term
+
+	copy the remaining elements in the term in instantiations[chosen_rule.lhs_variable]
+
+	foreach ground element e in the rhs
+		add e to term
+
+	foreach term variable tv in the rhs
+		add instantiations[tv] to term
+
+	foreach OCompartment { o , where } in ocompartments2ground
+		og <- make o ground using instantiations
+		add og to where
+
+get_updates:
+	foreach element it in chosen_match
+		if there is only one possible way to match this part of the rule in the term
+			mark this way for this part of the rule
+		else
+			sum <- sum of the multiplicity of the possible ways to match this part of the rule in the term
+
+			d <- random number * sum
+			s <- 0
+			foreach element i in the possible ways to match this part of the rule in the term
+				s <- s + multiplicity of the i-th way
+				if d < s
+					stop looping // we've found the right one
+	return the chosen ones
+
+get_mu ( MatchSet matchset, double d ):
+	s <- 0
+	foreach element it in matchset
+		foreach element i in matchset.list_of_matches
+			s <- s + list_of_matches[i].rate
+			if d < s
+				return it, list_of_matches[i]
+
+gillespie:
+	tau <- ( 1 / rate_sum from matchset ) * log ( 1 / random number )
+	time <- time + tau
+
+	chosen_rule, chosen_match <- get_mu ( matchset, random number * rate_sum from matchset )
+
+	updates <- get_updates ( chosen_match )
+	do_updates ( chosen_rule, updates )
+
+match* ( Atom in rule ar, Atom in term at ):
+	if ar.atom == at.atom && ar.multiplicity <= at.multiplicity
+		return binomial coefficient ( at.multiplicity, ar.multiplicity )
+	else
+		return -1
+
+match* ( Compartment in rule cr, Compartment in term ct ):
+	cr <- 1
+	if size for wrap and content are the same for both of the input Compartments
+		foreach element i in cr.wrap
+			r <- match* ( cr.wrap[i], ct.wrap[i] )
+			if r != -1
+				cr <- cr * r
+		foreach element i in cr.content
+			r <- match* ( cr.content[i], ct.content[i] )
+			if r != -1
+				cr <- cr * r
+	return cr
+
+match* ( PCompartment in rule pr, Compartment in term ct ):
+	pcr <- 1
+	if size for pr's wrap or content are less or equal than those of ct
+		i <- 0
+		j <- 0
+		while i < pr.wrap.size() && j < ct.wrap.size()
+			r <- match* ( pr.wrap[i], ct.wrap[j] )
+			if r != -1
+				pcr <- pcr * r
+				i <- i + 1
+			j <- j + 1
+		if i != pr.wrap.size()
+			return -1
+
+		i <- 0
+		j <- 0
+		while i < pr.content.size() && j < ct.content.size()
+			if pc.content[i] is a PCompartment && ct.content[j] is a Compartment
+				sub_r <- 1
+				foreach element k in ct.content
+					if ct.content[k] is a Compartment
+						r_k <- result of match with this particular PCompartment (pr.content[i]) against ct.content[k]
+						if r_k != -1
+							sub_r <- sub_r * r_k
+				r <- sub_r
+			else
+				r <- match* ( pr.content[i], ct.content[k] )
+			if r != -1
+				pcr <- pcr * r
+				i <- i + 1
+			if i != pr.content.size()
+				return -1
+			else
+				return pcr
+
+submatch:
+	multiplicity <- 1
+	list_of_matches <- []
+	foreach element i in the left hand side (lhs) of the rule
+		foreach element j in term
+			sub_multiplicity <- match* ( rule.lhs[i], term[j] )
+
+			if sub_multiplicity != -1 // match between rule.lhs[i] and term[j] correctly found
+
+				multiplicity <- multiplicity * sub_multiplicity
+				list_of_matches <- list_of_matches ++ { term[j], term, sub_multiplicity }
+
+				if term[j] is a Compartment and this is the first time we encounter it for this particular rule
+					match ( rule, term[j].wrap )
+					match ( rule, term[j].content )
+
+	if every element in rule.lhs has been found in term
+		return list_of_matches, multiplicity
+	else
+		return empty set of matches, -1
+
+match:
+	rate_sum <- 0
+	list_of_matches <- []
+
+	foreach rule i in model
+		submatchset, multiplicity <- submatch ( rule, term )
+		if submatchset is not empty
+			match_rate <- multiplicity * rules[i].rate
+			list_of_matches <- list_of_matches ++ { submatchset, match_rate }
+			rate_sum <- rate_sum + match_rate
+
+	return list_of_matches
+
+parse:
+	// parse input file
+	return { title, rules, term, monitors }
+
+main:
+	model <- parse ( input_file )
+	time_limit <- 100
+	time <- 0
+
+	do
+
+		matchset <- match ( model )
+
+		if matchset is not empty
+			time, term <- gillespie ( time, matchset )
+
+	while time < time_limit && matchset is not empty

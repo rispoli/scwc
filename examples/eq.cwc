@@ -1,0 +1,14 @@
+%MODEL: "equilibrio tra due specie"
+
+%rules
+NH3 ~X >>>[0.000018]>>> NH4 ~X %%
+NH4 ~X >>>[0.000000000562]>>> NH3 ~X %%
+
+%term
+138238*NH3 138238*NH4
+
+%monitors
+%m: "NH3": NH3 %%
+%m: "NH4": NH4 %%
+
+%end

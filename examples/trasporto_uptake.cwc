@@ -1,0 +1,17 @@
+%MODEL: "ammonium transporter"
+
+%rules
+NH3 ~X >>>[0.000018]>>> NH4 ~X %%
+NH4 ~X >>>[0.000000000562]>>> NH3 ~X %%
+NH3i ~X >>>[0.000018]>>> NH4i ~X %%
+NH4i ~X >>>[0.000000562]>>> NH3i ~X %%
+NH4 (LjAMT2 ~x|~X) ~Y >>>[0.000001]>>> H (LjAMT2 ~x|NH3i ~X) ~Y %%
+
+%term
+(LjAMT2|) 138238*NH3 138238*NH4
+
+%monitors
+%m: "internal NH3": NH3i %%
+%m: "internal NH4": NH4i %%
+
+%end

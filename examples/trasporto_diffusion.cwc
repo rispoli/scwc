@@ -1,0 +1,19 @@
+%MODEL: "ammonium transporter"
+
+%rules
+NH3 ~X >>>[0.000018]>>> NH4 ~X %%
+NH4 ~X >>>[0.000000000562]>>> NH3 ~X %%
+NH3i ~X >>>[0.000018]>>> NH4i ~X %%
+NH4i ~X >>>[0.000000562]>>> NH3i ~X %%
+NH4 (LjAMT2 ~x|~X) ~Y >>>[0.000001]>>> (LjAMT2 ~x|NH3i ~X) ~Y %%
+(FungMembr ~x|NH4 ~X) ~Y >>>[0.00001]>>> NH4 (FungMembr ~x|~X) ~Y %%
+
+%term
+(FungMembr | 2764677*NH4) (LjAMT2|)
+
+%monitors
+%m: "internal NH3": NH3i %%
+%m: "internal NH4": NH4i %%
+%m: "periarbuscolar NH4": NH4 (LjAMT2 ~x|~X) %%
+
+%end

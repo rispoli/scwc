@@ -1,0 +1,19 @@
+%MODEL: "simplified phosphate regulation mexhanism in EColi"
+
+%rules
+Pi (pore ~x|~X) ~Y >>>[0.1]>>> (pore ~x|Pi ~X) ~Y %%
+(pore ~x|Pi ~X) ~Y >>>[0.1]>>> Pi (pore ~x|~X) ~Y %%
+Pi (PhoR ~x|~X) ~Y >>>[0.01]>>> (PhoRP ~x|~X) ~Y %%
+(PhoRP ~x|~X) ~Y >>>[0.005]>>> Pi (PhoR ~x|~X) ~Y %%
+(PhoR ~x|PhoB ~X) ~Y >>>[0.001]>>> (PhoR ~x|PhoBP ~X) ~Y %%
+PhoBP PhoGenes ~X >>>[0.0001]>>> PhoBP PhoGenes PhoProt ~X %%
+PhoProt ~X >>>[0.00008]>>> ~X %%
+(PhoRP ~x|PhoBP ~X) ~Y >>>[0.0001]>>> (PhoRP ~x|PhoB ~X) ~Y %%
+
+%term
+20*Pi (pore|(5*PhoR 5*PhoRP|10*PhoB PhoGenes))
+
+%monitors
+%m: "PhoB target": PhoProt %%
+
+%end
